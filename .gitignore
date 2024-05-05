@@ -1,2 +1,5 @@
 .venv
+.env
 __pycache__
+proxyScript.py
+.DS_STORE
