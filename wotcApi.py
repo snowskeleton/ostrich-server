@@ -24,6 +24,21 @@ class Path(Enum):
     REGISTER = "/accounts/register"
 
 
+class WotcException(Exception):
+    pass
+
+
+class EmailAddressInUse(WotcException):
+    pass
+
+
+class AgeRequirement(WotcException):
+    pass
+
+
+class InvalidClientCredentials(WotcException):
+    pass
+
 class WOTCApi():
     access_token: str
     headers: dict
@@ -40,21 +55,30 @@ class WOTCApi():
 
         results: Response = call(self.url, **kwargs, headers=self.headers)
         jsonResults: dict = loadJson(results.content.decode('utf-8'))
-        if 'data' in jsonResults.keys():
+        return self._response_parse(jsonResults)
+
+    def _response_parse(self, response: dict) -> dict:
+        if 'data' in response.keys():
             logger.debug('Call successful!')
-            logger.debug(jsonResults)
-            return jsonResults['data']
-        elif 'access_token' in jsonResults.keys():
+            logger.debug(response)
+            return response['data']
+        elif 'access_token' in response.keys():
             logger.debug('Call successful!')
-            logger.debug(jsonResults)
-            return jsonResults
-        elif 'error' in jsonResults.keys():
-            logger.warn(
-                f"Found error {jsonResults['error']} in response body.")
-            raise Exception(jsonResults['error'])
+            logger.debug(response)
+            return response
+        elif 'error' in response.keys():
+            error = response['error']
+            logger.warning(f"Found error {error} in response body.")
+            match error:
+                case 'EMAIL ADDRESS IN USE':
+                    raise EmailAddressInUse
+                case 'AGE REQUIREMENT':
+                    raise AgeRequirement
+                case 'INVALID CLIENT CREDENTIALS':
+                    raise InvalidClientCredentials
         else:
-            logger.warn(f"Error: can't parse JSON:\n{jsonResults}")
-            raise Exception(500)
+            logger.warning(f"Error: can't parse JSON:\n{response}")
+            raise WotcException(f"Unknown response: {response}")
 
     def _patch(self, **kwargs) -> dict:
         return self.__call(patch, **kwargs)
@@ -73,15 +97,18 @@ class WOTCApi():
         return 'https://' + self.host.value + self.path.value
 
     @property
-    def headers(self) -> dict:
-        authorization: str
+    def authorization(self) -> str:
         if self.path == Path.AUTH:
             load_dotenv()
-            authorization = f'Basic {getenv("BASIC_CREDENTIALS")}'
+            # return getenv("WOTC_BASIC_CREDENTIALS")
+            return f'Basic {getenv("BASIC_CREDENTIALS")}'
         else:
-            authorization = f'Bearer {self.access_token}'
+            return f'Bearer {self.access_token}'
+
+    @property
+    def headers(self) -> dict:
         return {
-            'Authorization': authorization,
+            'Authorization': self.authorization,
             'Content-Type': 'application/json'
         }
 
