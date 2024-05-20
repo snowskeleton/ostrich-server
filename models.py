@@ -11,7 +11,8 @@ class User(Base):
 
     devices = relationship("Device", back_populates="user")
     ostrich_token = relationship("OstrichToken", back_populates="user")
-    wotc_token = relationship("WotcToken", back_populates="user")
+    wotc_token = relationship(
+        "WotcToken", uselist=False, back_populates="user")
 
 
 class WotcToken(Base):

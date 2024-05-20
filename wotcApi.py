@@ -9,6 +9,7 @@ from json import loads as loadJson
 from dotenv import load_dotenv
 from requests import Response, get, patch, post, put
 
+from schemas import WotcAuthResponse
 from local_logging import logger
 
 
@@ -112,7 +113,7 @@ class WOTCApi():
             'Content-Type': 'application/json'
         }
 
-    def login(self, refresh_token):
+    def login(self, refresh_token) -> WotcAuthResponse:
         self.host = Host.PLATFORM
         self.path = Path.AUTH
         json = {
@@ -120,4 +121,4 @@ class WOTCApi():
             'refresh_token': refresh_token
         }
         results = self._post(json=json)
-        return results
+        return WotcAuthResponse(**results)

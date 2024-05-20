@@ -15,8 +15,6 @@ class Device(ItemBase):
     owner_id: int
 
     model_config = ConfigDict(from_attributes=True)
-    # class Config:
-    #     orm_mode = True
 
 
 class UserBase(BaseModel):
@@ -33,8 +31,6 @@ class User(UserBase):
     devices: list[Device] = []
 
     model_config = ConfigDict(from_attributes=True)
-    # class Config:
-    #     orm_mode = True
 
 
 class WotcAuthResponse(BaseModel):
@@ -48,3 +44,25 @@ class WotcAuthResponse(BaseModel):
     persona_id: str
     refresh_token: str
     token_type: str
+
+
+class SaveWotcToken(BaseModel):
+    access_token: str
+    expires_in: int
+    refresh_token: str
+
+
+class SaveOstrichToken(BaseModel):
+    access_token: str
+    expires_in: int
+    refresh_token: str
+
+
+class OstrichBearerToken(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = 'bearer'
+
+
+class WotcRefreshToken(BaseModel):
+    refresh_token: str
