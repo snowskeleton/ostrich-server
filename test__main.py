@@ -5,8 +5,8 @@ from fastapi.testclient import TestClient
 from jose import JWTError, ExpiredSignatureError
 
 import main
-from main import create_access_token, get_current_user, login_for_access_token, WotcRefreshToken, app
-from models import User
+from main import create_access_token, get_current_user, login_for_access_token, LoginToken, app
+from models import User, OstrichToken
 from schemas import WotcAuthResponse
 from wotcApi import WOTCApi
 
@@ -31,7 +31,33 @@ async def test_login_for_access_token(monkeypatch):
         )
 
     monkeypatch.setattr(WOTCApi, "login", mock_wotc_login)
-    item = WotcRefreshToken(refresh_token="foobar")
+    item = LoginToken(wotc_login_token="foobar")
+    results = await login_for_access_token(item)
+    assert all(k in results.model_dump()
+               for k in ['access_token', 'refresh_token', 'token_type'])
+
+
+@pytest.mark.asyncio
+async def test_login_for_access_token_with_refresh_token(monkeypatch):
+    def mock_create_ostrich_token_for_user(db, user, ostrich_token):
+        return OstrichToken(
+            access_token=ostrich_token.access_token,
+            refresh_token=ostrich_token.refresh_token,
+        )
+    monkeypatch.setattr(
+        main,
+        "create_ostrich_token_for_user",
+        mock_create_ostrich_token_for_user,
+    )
+    monkeypatch.setattr(
+        main,
+        "get_user",
+        lambda _, user_id: User(id=user_id),
+    )
+
+    refresh_token = create_access_token(
+        data={"sub": 'some_user_id'}, expires_delta=timedelta(30))
+    item = LoginToken(refresh_token=refresh_token)
     results = await login_for_access_token(item)
     assert all(k in results.model_dump()
                for k in ['access_token', 'refresh_token', 'token_type'])
@@ -79,3 +105,12 @@ async def test_get_current_user(monkeypatch):
     monkeypatch.setattr(main, "get_user", lambda _, user_id: User(id=user_id))
     user = await get_current_user(real_access_token)
     assert user.id == 'some_user_id'
+
+
+# @pytest.mark.asyncio
+# async def test_read_users_me(monkeypatch):
+#     real_access_token = create_access_token(
+#         data={"sub": 'some_user_id'}, expires_delta=timedelta(30))
+#     monkeypatch.setattr(main, "get_user", lambda _, user_id: User(id=user_id))
+#     user = await test_read_users_me(real_access_token)
+#     assert user.id == 'some_user_id'

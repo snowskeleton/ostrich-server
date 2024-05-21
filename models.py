@@ -10,7 +10,7 @@ class User(Base):
     id = Column(String, primary_key=True)
 
     devices = relationship("Device", back_populates="user")
-    ostrich_token = relationship("OstrichToken", back_populates="user")
+    ostrich_tokens = relationship("OstrichToken", back_populates="user")
     wotc_token = relationship(
         "WotcToken", uselist=False, back_populates="user")
 
@@ -38,7 +38,7 @@ class OstrichToken(Base):
     refresh_token = Column(String)
 
     user_id = Column(String, ForeignKey("users.id"))
-    user = relationship("User", back_populates="ostrich_token")
+    user = relationship("User", back_populates="ostrich_tokens")
 
 
 class Device(Base):

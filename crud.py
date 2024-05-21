@@ -11,6 +11,13 @@ def get_user(db: Session, user_id: str):
     return db.query(models.User).filter(models.User.id == user_id).first()
 
 
+def delete_ostrich_token(db: Session, refresh_token: str):
+    db.query(models.OstrichToken).filter(
+        models.OstrichToken.refresh_token == refresh_token).delete()
+    db.commit()
+    return
+
+
 def get_user_by_email(db: Session, email: str):
     return db.query(models.User).filter(models.User.email == email).first()
 

@@ -17,16 +17,16 @@ class Device(ItemBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class UserBase(BaseModel):
-    email: str
+# class UserBase(BaseModel):
+#     email: str
 
 
-class UserCreate(UserBase):
-    password: str
+# class UserCreate(UserBase):
+#     password: str
 
 
-class User(UserBase):
-    id: int
+class User(BaseModel):
+    id: str
     is_active: bool
     devices: list[Device] = []
 
@@ -64,5 +64,10 @@ class OstrichBearerToken(BaseModel):
     token_type: str = 'bearer'
 
 
-class WotcRefreshToken(BaseModel):
+class LoginToken(BaseModel):
+    wotc_login_token: str = None
+    refresh_token: str = None
+
+
+class OSTRichRefreshToken(BaseModel):
     refresh_token: str
