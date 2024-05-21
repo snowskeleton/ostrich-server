@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
@@ -7,7 +7,7 @@ from jose import JWTError, ExpiredSignatureError
 import main
 from main import create_access_token, get_current_user, login_for_access_token, LoginToken, app
 from models import User, OstrichToken
-from schemas import WotcAuthResponse
+from schemas import WotcAuthResponse, SaveOstrichToken
 from wotcApi import WOTCApi
 
 
@@ -39,10 +39,11 @@ async def test_login_for_access_token(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_login_for_access_token_with_refresh_token(monkeypatch):
-    def mock_create_ostrich_token_for_user(db, user, ostrich_token):
+    def mock_create_ostrich_token_for_user(db, user, ostrich_token: SaveOstrichToken):
         return OstrichToken(
             access_token=ostrich_token.access_token,
             refresh_token=ostrich_token.refresh_token,
+            expires_in=ostrich_token.expires_in
         )
     monkeypatch.setattr(
         main,
@@ -56,7 +57,8 @@ async def test_login_for_access_token_with_refresh_token(monkeypatch):
     )
 
     refresh_token = create_access_token(
-        data={"sub": 'some_user_id'}, expires_delta=timedelta(30))
+        data={"sub": 'some_user_id', "exp": datetime.now(timezone.utc) +
+              timedelta(minutes=30)})
     item = LoginToken(refresh_token=refresh_token)
     results = await login_for_access_token(item)
     assert all(k in results.model_dump()
@@ -73,7 +75,8 @@ async def test_get_current_user_bad_token():
 @pytest.mark.asyncio
 async def test_get_current_user_expired_token():
     expired_access_token = create_access_token(
-        data={"sub": 'some_user_id'}, expires_delta=timedelta(-30))
+        data={"sub": 'some_user_id', "exp": datetime.now(timezone.utc) +
+              timedelta(minutes=-30)})
     with pytest.raises(Exception) as e_info:
         await get_current_user(expired_access_token)
     assert e_info.type == ExpiredSignatureError
@@ -82,7 +85,8 @@ async def test_get_current_user_expired_token():
 @pytest.mark.asyncio
 async def test_get_current_user_no_username():
     no_username_access_token = create_access_token(
-        data={'some': 'garbage'}, expires_delta=timedelta(30))
+        data={"some": "garbage", "exp": datetime.now(timezone.utc) +
+              timedelta(minutes=30)})
     with pytest.raises(Exception) as e_info:
         await get_current_user(no_username_access_token)
     assert e_info.type == HTTPException
@@ -91,7 +95,8 @@ async def test_get_current_user_no_username():
 @pytest.mark.asyncio
 async def test_get_current_user_not_in_db(monkeypatch):
     real_access_token_user_not_in_db = create_access_token(
-        data={"sub": 'some_user_id'}, expires_delta=timedelta(30))
+        data={"sub": 'some_user_id', "exp": datetime.now(timezone.utc) +
+              timedelta(minutes=30)})
     monkeypatch.setattr(main, "get_user", lambda _, user_id: None)
     with pytest.raises(Exception) as e_info:
         await get_current_user(real_access_token_user_not_in_db)
@@ -101,7 +106,8 @@ async def test_get_current_user_not_in_db(monkeypatch):
 @pytest.mark.asyncio
 async def test_get_current_user(monkeypatch):
     real_access_token = create_access_token(
-        data={"sub": 'some_user_id'}, expires_delta=timedelta(30))
+        data={"sub": 'some_user_id', "exp": datetime.now(timezone.utc) +
+              timedelta(minutes=30)})
     monkeypatch.setattr(main, "get_user", lambda _, user_id: User(id=user_id))
     user = await get_current_user(real_access_token)
     assert user.id == 'some_user_id'

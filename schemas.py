@@ -61,6 +61,7 @@ class SaveOstrichToken(BaseModel):
 class OstrichBearerToken(BaseModel):
     access_token: str
     refresh_token: str
+    expires_in: int
     token_type: str = 'bearer'
 
 

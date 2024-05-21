@@ -23,6 +23,7 @@ load_dotenv()
 SECRET_KEY = getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+REFRESH_TOKEN_TOKEN_EXPIRE_DAYS = 90
 
 app = FastAPI()
 db = SessionLocal()
@@ -82,12 +83,24 @@ async def login_for_access_token(creds: LoginToken) -> OstrichBearerToken:
         wotc_token = create_or_update_wotc_token_for_user(db, user, wotc_token)
 
     # create ostric token for user to authenticate with us later
+    access_token_expiry_time = datetime.now(timezone.utc) + \
+        timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    refresh_token_expiry_time = datetime.now(timezone.utc) + \
+        timedelta(days=REFRESH_TOKEN_TOKEN_EXPIRE_DAYS)
     access_token = create_access_token(
-        data={"sub": user.id}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+        data={
+            "sub": user.id,
+            "exp": access_token_expiry_time,
+        }
+    )
     refresh_token = create_access_token(
-        data={"sub": user.id}, expires_delta=timedelta(days=90))
+        data={
+            "sub": user.id,
+            "exp": refresh_token_expiry_time
+        }
+    )
     ostrich_token = SaveOstrichToken(
-        expires_in=30,
+        expires_in=int(access_token_expiry_time.timestamp()),
         access_token=access_token,
         refresh_token=refresh_token,
     )
@@ -95,17 +108,15 @@ async def login_for_access_token(creds: LoginToken) -> OstrichBearerToken:
     if creds.refresh_token:
         delete_ostrich_token(db, creds.refresh_token)
 
-    return OstrichBearerToken(**ostrich_token.__dict__)
+    return OstrichBearerToken(
+        refresh_token=ostrich_token.refresh_token,
+        access_token=ostrich_token.access_token,
+        expires_in=ostrich_token.expires_in,
+    )
 
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
+def create_access_token(data: dict):
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
-
-    to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
