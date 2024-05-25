@@ -44,7 +44,7 @@ class OstrichToken(Base):
 class Device(Base):
     __tablename__ = "devices"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(String, primary_key=True)
     communication_token = Column(String)
 
     user_id = Column(String, ForeignKey("users.id"))

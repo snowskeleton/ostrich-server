@@ -1,8 +1,8 @@
-"""two tokens
+"""initial migration
 
-Revision ID: e31a0bdd7dc0
+Revision ID: 963c850b8da6
 Revises: 
-Create Date: 2024-05-12 17:17:48.967366
+Create Date: 2024-05-22 13:04:36.447383
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'e31a0bdd7dc0'
+revision: str = '963c850b8da6'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -25,7 +25,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('devices',
-    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('id', sa.String(), nullable=False),
     sa.Column('communication_token', sa.String(), nullable=True),
     sa.Column('user_id', sa.String(), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),

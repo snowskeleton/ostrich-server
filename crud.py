@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 # from . import models, schemas
 import models
-from schemas import SaveOstrichToken, SaveWotcToken, WotcAuthResponse
+from schemas import SaveOstrichToken, SaveWotcToken, WotcAuthResponse, Device
 from models import WotcToken, OstrichToken
 
 
@@ -24,6 +24,24 @@ def get_user_by_email(db: Session, email: str):
 
 def get_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.User).offset(skip).limit(limit).all()
+
+
+def create_or_update_device(db: Session, user: models.User, device: Device):
+    db_device = db.query(models.Device).filter(
+        models.Device.id == device.device_id).first()
+    if db_device:
+        db_device.communication_token = device.apns_token
+    else:
+        db_device = models.Device(
+            id=device.device_id,
+            communication_token=device.apns_token,
+            user_id=user.id,
+            user=user,
+        )
+    db.add(db_device)
+    db.commit()
+    db.refresh(db_device)
+    return db_device
 
 
 def create_user(db: Session, user: WotcAuthResponse):

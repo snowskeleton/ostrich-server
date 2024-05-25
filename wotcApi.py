@@ -1,3 +1,4 @@
+import logging
 from enum import Enum
 from os import getenv
 from typing import List, Dict, Callable
@@ -102,7 +103,7 @@ class WOTCApi():
         if self.path == Path.AUTH:
             load_dotenv()
             # return getenv("WOTC_BASIC_CREDENTIALS")
-            return f'Basic {getenv("BASIC_CREDENTIALS")}'
+            return f'Basic {getenv("WOTC_BASIC_CREDENTIALS")}'
         else:
             return f'Bearer {self.access_token}'
 
@@ -120,5 +121,6 @@ class WOTCApi():
             'grant_type': 'refresh_token',
             'refresh_token': refresh_token
         }
+        logging.debug(self.headers)
         results = self._post(json=json)
         return WotcAuthResponse(**results)

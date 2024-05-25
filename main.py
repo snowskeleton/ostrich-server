@@ -1,23 +1,26 @@
+from os import getenv
+from dotenv import load_dotenv
+from typing import Annotated
 from pydantic import BaseModel
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, Header
 
 from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordBearer  # , OAuth2PasswordRequestForm
 from jose import jwt
 from passlib.context import CryptContext
 
-from crud import get_user, create_user, create_or_update_wotc_token_for_user, create_ostrich_token_for_user, delete_ostrich_token
+from crud import get_user, create_user, create_or_update_wotc_token_for_user, create_ostrich_token_for_user, delete_ostrich_token, create_or_update_device
 
+import database
 from database import SessionLocal
 
 from wotcApi import WOTCApi
-from schemas import SaveOstrichToken, SaveWotcToken, OstrichBearerToken, LoginToken, User, OSTRichRefreshToken
+from schemas import SaveOstrichToken, SaveWotcToken, OstrichBearerToken, LoginToken, Device
+from apns_push_notifications import pushiOSMessage
 
-from os import getenv
-from dotenv import load_dotenv
 
 load_dotenv()
 SECRET_KEY = getenv("SECRET_KEY")
@@ -37,12 +40,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth_2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-# @app.post("/register-device")
-# def login_server(creds: Item):
-#     results = WOTCApi().login(creds.refresh_token)
-
-#     return {f"Registered token: {creds.refresh_token} with deviceId: {creds.deviceId}"}
-
 async def get_current_user(token: str = Depends(oauth_2_scheme)):
     credential_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -61,6 +58,18 @@ async def get_current_user(token: str = Depends(oauth_2_scheme)):
         raise credential_exception
 
     return user
+
+
+@app.post("/register-device")
+async def register_device(device_registration: Device, authorization: Annotated[str | None, Header()] = None):
+    # splits "Bearer key" into "key"
+    auth_key = authorization.split(' ', 1)[-1]
+    user = await get_current_user(auth_key)
+    device = create_or_update_device(db, user, device_registration)
+    import time
+    time.sleep(5)
+    await pushiOSMessage(device.communication_token, alert_title="Time in round!", alert_body="Active player, finish your turn.")
+    return 'OK'
 
 
 @app.post("/token", response_model=OstrichBearerToken)
@@ -85,8 +94,6 @@ async def login_for_access_token(creds: LoginToken) -> OstrichBearerToken:
     # create ostric token for user to authenticate with us later
     access_token_expiry_time = datetime.now(timezone.utc) + \
         timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    refresh_token_expiry_time = datetime.now(timezone.utc) + \
-        timedelta(days=REFRESH_TOKEN_TOKEN_EXPIRE_DAYS)
     access_token = create_access_token(
         data={
             "sub": user.id,
@@ -96,11 +103,10 @@ async def login_for_access_token(creds: LoginToken) -> OstrichBearerToken:
     refresh_token = create_access_token(
         data={
             "sub": user.id,
-            "exp": refresh_token_expiry_time
         }
     )
     ostrich_token = SaveOstrichToken(
-        expires_in=int(access_token_expiry_time.timestamp()),
+        expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         access_token=access_token,
         refresh_token=refresh_token,
     )

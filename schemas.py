@@ -1,21 +1,18 @@
 from pydantic import BaseModel, ConfigDict
 
 
-class ItemBase(BaseModel):
-    title: str
-    description: str | None = None
+# class ItemBase(BaseModel):
+#     title: str
+#     description: str | None = None
 
 
-class ItemCreate(ItemBase):
-    pass
+# class ItemCreate(ItemBase):
+#     pass
 
 
-class Device(ItemBase):
-    id: int
-    owner_id: int
-
-    model_config = ConfigDict(from_attributes=True)
-
+class Device(BaseModel):
+    device_id: str
+    apns_token: str
 
 # class UserBase(BaseModel):
 #     email: str
@@ -25,12 +22,12 @@ class Device(ItemBase):
 #     password: str
 
 
-class User(BaseModel):
-    id: str
-    is_active: bool
-    devices: list[Device] = []
+# class User(BaseModel):
+#     id: str
+#     is_active: bool
+#     devices: list[Device] = []
 
-    model_config = ConfigDict(from_attributes=True)
+#     model_config = ConfigDict(from_attributes=True)
 
 
 class WotcAuthResponse(BaseModel):
