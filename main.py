@@ -66,8 +66,8 @@ async def register_device(device_registration: Device, authorization: Annotated[
     auth_key = authorization.split(' ', 1)[-1]
     user = await get_current_user(auth_key)
     device = create_or_update_device(db, user, device_registration)
-    import time
-    time.sleep(5)
+    # import time
+    # time.sleep(5)
     await pushiOSMessage(device.communication_token, alert_title="Time in round!", alert_body="Active player, finish your turn.")
     return 'OK'
 
